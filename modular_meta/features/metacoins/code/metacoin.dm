@@ -45,7 +45,7 @@ GLOBAL_ALIST_INIT(metacoin_achievement_reward_overrides, alist(
 
 	// Scores
 	/datum/award/score/hardcore_random = METACOIN_AWARD_CLOSE_TO_NOTHING, //5 more points for random character it's fair
-	/datum/award/score/intento_score = METACOIN_AWARD_CLOSE_TO_NOTHING,
+	/datum/award/score/intento_score = METACOIN_AWARD_NONE, // That's getting abused 100%
 	/datum/award/score/chef_tourist_score = METACOIN_AWARD_CLOSE_TO_NOTHING,
 	/datum/award/score/style_score = METACOIN_AWARD_CLOSE_TO_NOTHING,
 ))
