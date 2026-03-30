@@ -2,32 +2,96 @@
 "a" = (
 /turf/open/water/deep_beach/lethal,
 /area/deathmatch/fullbright)
+"d" = (
+/turf/open/misc/beach/coast{
+	dir = 10
+	},
+/area/deathmatch/fullbright)
+"e" = (
+/obj/structure/hedge,
+/turf/open/indestructible/hotelwood,
+/area/deathmatch/fullbright)
+"f" = (
+/obj/structure/chair/pew/left{
+	dir = 1
+	},
+/turf/open/indestructible/hotelwood,
+/area/deathmatch/fullbright)
+"g" = (
+/turf/open/misc/beach/coast/corner,
+/area/deathmatch/fullbright)
+"h" = (
+/obj/structure/chair/pew/right{
+	dir = 1
+	},
+/turf/open/indestructible/hotelwood,
+/area/deathmatch/fullbright)
 "i" = (
 /turf/open/misc/beach/sand,
 /area/deathmatch/fullbright)
+"j" = (
+/turf/open/misc/beach/coast,
+/area/deathmatch/fullbright)
 "l" = (
+/obj/structure/chair/pew/right{
+	dir = 1
+	},
 /obj/item/storage/toolbox/drone{
 	pixel_x = 3;
-	pixel_y = -1
+	pixel_y = -8
 	},
 /turf/open/indestructible/hotelwood,
 /area/deathmatch/fullbright)
 "p" = (
-/turf/open/misc/grass,
+/turf/open/indestructible{
+	icon_state = "grass"
+	},
+/area/deathmatch/fullbright)
+"q" = (
+/turf/open/misc/beach/coast/corner{
+	dir = 1
+	},
+/area/deathmatch/fullbright)
+"r" = (
+/turf/open/misc/beach/coast{
+	dir = 1
+	},
+/area/deathmatch/fullbright)
+"t" = (
+/turf/open/misc/beach/coast{
+	dir = 6
+	},
 /area/deathmatch/fullbright)
 "v" = (
 /obj/effect/landmark/deathmatch_player_spawn,
-/turf/open/misc/sandy_dirt,
+/turf/open/indestructible{
+	icon_state = "sand"
+	},
+/area/deathmatch/fullbright)
+"w" = (
+/obj/structure/statue/gold/hos{
+	name = "statue of the epstein"
+	},
+/turf/open/indestructible/hotelwood,
 /area/deathmatch/fullbright)
 "x" = (
 /turf/open/indestructible/hotelwood,
 /area/deathmatch/fullbright)
 "A" = (
 /obj/structure/flora/tree/palm,
-/turf/open/misc/grass,
+/turf/open/indestructible{
+	icon_state = "grass"
+	},
 /area/deathmatch/fullbright)
 "C" = (
-/turf/open/misc/sandy_dirt,
+/turf/open/indestructible{
+	icon_state = "sand"
+	},
+/area/deathmatch/fullbright)
+"E" = (
+/turf/open/misc/beach/coast{
+	dir = 4
+	},
 /area/deathmatch/fullbright)
 "G" = (
 /obj/machinery/syndicatebomb{
@@ -36,6 +100,11 @@
 	},
 /obj/item/stack/cable_coil/cut,
 /turf/open/indestructible/hotelwood,
+/area/deathmatch/fullbright)
+"H" = (
+/turf/open/misc/beach/coast/corner{
+	dir = 4
+	},
 /area/deathmatch/fullbright)
 "I" = (
 /turf/open/water/beach,
@@ -50,15 +119,52 @@
 /area/deathmatch/fullbright)
 "M" = (
 /obj/structure/flora/tree/palm/style_2,
-/turf/open/misc/grass,
+/turf/open/indestructible{
+	icon_state = "grass"
+	},
 /area/deathmatch/fullbright)
 "N" = (
-/obj/structure/mineral_door/wood,
+/obj/structure/mineral_door/wood{
+	opacity = 0
+	},
 /turf/open/indestructible/hotelwood,
 /area/deathmatch/fullbright)
+"Q" = (
+/obj/structure/altar,
+/obj/effect/mob_spawn/corpse/human,
+/turf/open/indestructible/hotelwood,
+/area/deathmatch/fullbright)
+"S" = (
+/turf/open/misc/beach/coast{
+	dir = 5
+	},
+/area/deathmatch/fullbright)
 "T" = (
-/turf/closed/wall{
-	icon = 'modular_meta/features/deathmatch/icons/island_operation.dmi'
+/turf/closed/indestructible/reinforced{
+	icon_state = "wall-0";
+	icon = 'modular_meta/features/deathmatch/icons/island_operation.dmi';
+	opacity = 0
+	},
+/area/deathmatch/fullbright)
+"U" = (
+/turf/open/misc/beach/coast{
+	dir = 8
+	},
+/area/deathmatch/fullbright)
+"V" = (
+/obj/effect/landmark/deathmatch_player_spawn,
+/turf/open/misc/beach/coast{
+	dir = 4
+	},
+/area/deathmatch/fullbright)
+"X" = (
+/turf/open/misc/beach/coast/corner{
+	dir = 8
+	},
+/area/deathmatch/fullbright)
+"Z" = (
+/turf/open/misc/beach/coast{
+	dir = 9
 	},
 /area/deathmatch/fullbright)
 
@@ -259,9 +365,9 @@ I
 I
 I
 I
-a
-a
-a
+I
+I
+I
 a
 a
 a
@@ -298,13 +404,13 @@ I
 I
 I
 I
+Z
+U
+U
+U
+d
 I
 I
-I
-I
-I
-I
-a
 a
 a
 a
@@ -337,14 +443,14 @@ I
 I
 I
 I
-I
-I
-I
-I
+Z
+U
+U
+H
 i
 i
 i
-I
+j
 I
 I
 I
@@ -368,26 +474,26 @@ K
 I
 I
 I
-I
-I
-I
-I
-I
-I
-I
-I
-I
-I
-I
-I
+Z
+U
+U
+U
+U
+U
+U
+U
+U
+U
+U
+H
 i
 i
 i
 i
 i
 i
-I
-I
+q
+d
 I
 I
 a
@@ -406,11 +512,11 @@ a
 I
 I
 I
-I
-I
-I
-I
-I
+Z
+U
+U
+U
+H
 i
 i
 i
@@ -429,7 +535,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 a
@@ -447,8 +553,8 @@ a
 a
 I
 I
-I
-I
+Z
+H
 i
 i
 i
@@ -471,7 +577,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -489,7 +595,7 @@ a
 a
 I
 I
-I
+r
 i
 i
 i
@@ -513,7 +619,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -530,8 +636,8 @@ a
 a
 a
 I
-I
-I
+Z
+H
 i
 i
 i
@@ -555,7 +661,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -572,7 +678,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 i
@@ -597,7 +703,7 @@ p
 i
 i
 i
-I
+j
 I
 I
 I
@@ -614,7 +720,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 p
@@ -639,8 +745,8 @@ p
 i
 i
 i
-I
-I
+q
+d
 K
 I
 a
@@ -656,7 +762,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 p
@@ -682,7 +788,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 a
@@ -698,10 +804,9 @@ a
 a
 a
 I
-I
+r
 i
 i
-p
 p
 p
 p
@@ -711,6 +816,7 @@ T
 T
 T
 T
+T
 p
 p
 p
@@ -724,7 +830,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -740,34 +846,34 @@ a
 a
 a
 I
-I
+r
 i
-i
-p
-p
-A
-p
-T
-x
-x
-x
-x
-T
-p
-p
-p
-p
-p
 p
 A
 p
 p
+T
+e
+x
+f
+f
+x
+T
+p
+p
+p
+p
+p
+p
+A
+p
+p
 p
 i
 i
 i
-I
-I
+q
+d
 I
 I
 a
@@ -782,17 +888,17 @@ a
 a
 a
 I
-I
-i
+r
 i
 p
 p
 p
 p
 T
+w
 x
 l
-x
+h
 x
 T
 C
@@ -809,7 +915,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 a
@@ -824,14 +930,14 @@ a
 a
 a
 K
-I
+r
 i
-i
+p
 p
 M
 p
-p
 T
+Q
 x
 G
 J
@@ -851,7 +957,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 a
@@ -866,17 +972,17 @@ a
 a
 a
 I
-I
+r
 i
-i
-p
-p
 M
 p
+p
+p
 T
 x
 x
-x
+f
+f
 x
 T
 C
@@ -893,7 +999,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 a
@@ -908,17 +1014,17 @@ a
 a
 a
 I
-I
-i
+r
 i
 p
 p
 p
 p
 T
+e
 x
-x
-x
+h
+h
 x
 T
 p
@@ -935,7 +1041,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 a
@@ -950,10 +1056,9 @@ a
 a
 a
 I
-I
+r
 i
 i
-p
 p
 M
 p
@@ -963,6 +1068,7 @@ T
 T
 T
 T
+T
 p
 p
 p
@@ -977,7 +1083,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -992,7 +1098,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 p
@@ -1019,7 +1125,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -1034,7 +1140,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 p
@@ -1061,7 +1167,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -1076,7 +1182,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 p
@@ -1103,7 +1209,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -1118,7 +1224,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 p
@@ -1145,7 +1251,7 @@ i
 i
 i
 i
-I
+j
 K
 I
 I
@@ -1160,7 +1266,7 @@ a
 a
 a
 I
-I
+r
 i
 i
 i
@@ -1186,8 +1292,8 @@ i
 i
 i
 i
-I
-I
+g
+t
 I
 I
 I
@@ -1202,8 +1308,8 @@ a
 a
 a
 I
-I
-I
+S
+X
 i
 i
 i
@@ -1228,7 +1334,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -1245,8 +1351,8 @@ a
 a
 I
 I
-I
-I
+S
+X
 i
 i
 i
@@ -1270,7 +1376,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -1288,10 +1394,10 @@ a
 a
 I
 I
-I
-I
-I
-I
+S
+E
+E
+X
 i
 i
 i
@@ -1312,7 +1418,7 @@ i
 i
 i
 i
-I
+j
 I
 I
 I
@@ -1333,11 +1439,11 @@ I
 I
 I
 I
-I
-I
-I
-K
-I
+S
+E
+E
+V
+X
 i
 i
 i
@@ -1353,8 +1459,8 @@ i
 i
 i
 i
-I
-I
+g
+t
 I
 I
 I
@@ -1379,23 +1485,23 @@ I
 I
 I
 I
-I
-I
-I
-I
-I
+S
+E
+E
+E
+X
 i
 i
 i
 i
-I
-I
-I
+g
+E
+X
 i
 i
 i
-I
-I
+g
+t
 I
 I
 I
@@ -1425,18 +1531,18 @@ I
 I
 I
 I
+S
+E
+E
+E
+E
+t
 I
-I
-I
-I
-I
-I
-I
-I
-I
-I
-I
-I
+S
+E
+E
+E
+t
 I
 I
 I
