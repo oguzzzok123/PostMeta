@@ -1,3 +1,4 @@
+#include "holidays.dm"
 #include "beepsky\code\hailer_phrase.dm"
 #include "beepsky\code\secbot.dm"
 #include "borgs\code\sounds.dm"
