@@ -8982,7 +8982,7 @@
 "aHp" = (
 /obj/machinery/door/airlock{
 	name = "Unit 1";
-	id = "Toilet1"
+	id_tag = "Toilet1"
 	},
 /turf/open/floor/iron/freezer,
 /area/station/commons/toilet/restrooms)
@@ -8991,7 +8991,7 @@
 	name = "Unit 2"
 	},
 /turf/open/floor/iron/freezer{
-	id = "Toilet2"
+	id_tag = "Toilet2"
 	},
 /area/station/commons/toilet/restrooms)
 "aHr" = (
