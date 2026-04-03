@@ -1,4 +1,4 @@
-// ORIGINAL FILE: code/datums/wounds/slash.dm
+// ORIGINAL FILE: code/datums/wounds/pierce.dm
 //modular override for self-licking, for some reason you CAN lick someone else's wound, but can't do the same for yourself..
 // fixes being unable to lick-self your bleeding wounds as felinids
 /datum/wound/pierce/try_handling(mob/living/user)
