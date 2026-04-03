@@ -25,7 +25,6 @@
 /datum/metacoin_shop_controller/proc/roll_slot_reels()
 	var/list/icons_catalog = get_slot_icons_catalog()
 	var/list/reels = list()
-	var/jackpot_icon_name = "[METACOIN_SLOT_JACKPOT_ICON]"
 
 	for(var/reel_index in 1 to 5)
 		var/list/reel = list()
