@@ -113,11 +113,11 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 	return "Warning: you have restricted jobs enabled in preferences ([english_list(restricted_preferences)]). If one of these jobs is assigned at roundstart, antag token will be refunded."
 
 /datum/metacoin_shop_controller/proc/get_antag_roles()
-	var/static/list/antag_roles = list(
-		new /datum/metacoinshop/antag_role/traitor,
-		new /datum/metacoinshop/antag_role/changeling,
-		new /datum/metacoinshop/antag_role/heretic,
-	)
+	var/static/list/antag_roles
+	if(isnull(antag_roles))
+		antag_roles = list()
+		for(var/role_path in subtypesof(/datum/metacoinshop/antag_role))
+			antag_roles += new role_path
 
 	return antag_roles
 
