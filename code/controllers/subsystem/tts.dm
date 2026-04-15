@@ -67,14 +67,24 @@ SUBSYSTEM_DEF(tts)
 	var/datum/http_request/request = new()
 	var/list/headers = list()
 	headers["Authorization"] = CONFIG_GET(string/tts_http_token)
-	request.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-voices", "", headers, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+	//MASSMETA EDIT BEGIN (/n/tts)
+	//request.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-voices", "", headers, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+
+	request.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/speakers", "", headers, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+	//MASSMETA EDIT END
 	request.begin_async()
 	UNTIL(request.is_complete())
 	var/datum/http_response/response = request.into_response()
 	if(response.errored || response.status_code != 200)
 		stack_trace(response.error)
 		return FALSE
-	available_speakers = json_decode(response.body)
+	//MASSMETA EDIT BEGIN (/n/tts)
+	//available_speakers = json_decode(response.body)
+
+	var/list/temp_speakers = json_decode(response.body)?["voices"]
+	for(var/speaker in temp_speakers)
+		available_speakers.Add(speaker["speakers"][1])
+	//MASSMETA EDIT END
 	tts_enabled = TRUE
 	if(CONFIG_GET(str_list/tts_voice_blacklist))
 		var/list/blacklisted_voices = CONFIG_GET(str_list/tts_voice_blacklist)

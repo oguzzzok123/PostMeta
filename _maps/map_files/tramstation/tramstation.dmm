@@ -2913,6 +2913,7 @@
 	dir = 6
 	},
 /obj/machinery/camera/autoname/directional/east,
+/obj/machinery/vending/mod_modules,
 /turf/open/floor/iron,
 /area/station/hallway/secondary/exit)
 "aoV" = (
@@ -14111,6 +14112,7 @@
 	},
 /obj/structure/window/reinforced/spawner/directional/north,
 /obj/structure/window/reinforced/spawner/directional/west,
+/mob/living/silicon/robot/shell/cell,
 /turf/open/floor/circuit,
 /area/station/ai/satellite/chamber)
 "dMg" = (
@@ -16407,6 +16409,11 @@
 /obj/structure/cable,
 /turf/open/floor/iron,
 /area/station/engineering/main)
+"eDD" = (
+/obj/structure/table/reinforced,
+/obj/effect/spawner/random/decoration/lavalamp,
+/turf/open/floor/iron/dark,
+/area/station/service/bar)
 "eDk" = (
 /obj/effect/turf_decal/trimline/neutral/line{
 	dir = 8
@@ -40528,6 +40535,7 @@
 /obj/structure/window/reinforced/spawner/directional/north,
 /obj/structure/window/reinforced/spawner/directional/east,
 /obj/structure/cable,
+/mob/living/silicon/robot/shell/cell,
 /obj/machinery/flasher/directional/south{
 	id = "AI";
 	pixel_x = -10
@@ -45761,6 +45769,10 @@
 "pbV" = (
 /obj/structure/window/reinforced/spawner/directional/west,
 /obj/structure/musician/piano,
+/obj/effect/spawner/random/decoration/lavalamp{
+	pixel_y = 7;
+	pixel_x = -3
+	},
 /turf/open/floor/carpet,
 /area/station/service/theater)
 "pcm" = (
@@ -168977,10 +168989,10 @@ mHc
 uqA
 aTw
 jgn
+eDD
 crT
 crT
-crT
-crT
+eDD
 oVc
 mzb
 wev
@@ -169489,14 +169501,14 @@ rBy
 vJt
 mHc
 uyS
-crT
+eDD
 fkU
 yfd
 rro
 fZR
 eKq
 aCa
-crT
+eDD
 wcv
 mHc
 mHc
@@ -170003,14 +170015,14 @@ oCx
 vJt
 mHc
 wwK
-crT
+eDD
 kcu
 nBy
 eTP
 bKF
 tXL
 hOh
-crT
+eDD
 hCp
 mHc
 mHc
@@ -170519,7 +170531,7 @@ mHc
 jbx
 xLh
 uyq
-crT
+eDD
 crT
 xpC
 ivn
