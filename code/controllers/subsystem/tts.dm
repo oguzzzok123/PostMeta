@@ -34,7 +34,7 @@ SUBSYSTEM_DEF(tts)
 	var/pitch_enabled = FALSE
 
 	/// TTS messages won't play if requests took longer than this duration of time.
-	var/message_timeout = 7 SECONDS
+	var/message_timeout = 25 SECONDS
 
 	/// The max concurrent http requests that can be made at one time. Used to prevent 1 server from overloading the tts server
 	var/max_concurrent_requests = 4
@@ -415,7 +415,7 @@ SUBSYSTEM_DEF(tts)
 	if(!fexists("tmp/tts/init.txt"))
 		rustg_file_write("rustg HTTP requests can't write to folders that don't exist, so we need to make it exist.", "tmp/tts/init.txt")
 
-	var/static/regex/contains_alphanumeric = regex("\[a-zA-Z0-9]")
+	var/static/regex/contains_alphanumeric = regex("\[А-Яа-яЁё0-9]")
 	// If there is no alphanumeric char, the output will usually be static, so
 	// don't bother sending
 	if(contains_alphanumeric.Find(message) == 0)
