@@ -31,6 +31,43 @@
 	price = 75
 	item_type = /obj/item/reagent_containers/medigel/aiuri
 
+/datum/metacoinshop/listing/preround/eva_kit
+	id = "extra_vehicular"
+	name = "Premium EVA-ready kit"
+	desc = "Full-kit containing a bluespace-compressed jetpack, an oxygen tank, a suit, a helmet and a medkit! Gun included!"
+	price = 300
+	item_type = /obj/item/storage/box/eva_kit
+
+/obj/item/storage/box/eva_kit
+	name = "EVA kit"
+	desc = "A sturdy looking box, label says \"it has everything needed for space exploration\""
+
+/obj/item/storage/box/eva_kit/Initialize(mapload)
+	.=..()
+	var/obj/item/stack/medical/suture/suture = new/obj/item/stack/medical/suture(src)
+	suture.amount = 10
+	var/obj/item/stack/medical/mesh/mesh = new /obj/item/stack/medical/mesh(src)
+	mesh.amount = 10
+	var/obj/item/stock_parts/power_store/cell/high/cell = new /obj/item/stock_parts/power_store/cell/high(src)
+	cell.charge = 10000 // the fuck is a cell unit? a thousand I guess? cuz hundred is 0.1%
+	var/obj/item/tank/jetpack/jpack = new /obj/item/tank/jetpack(src)
+	//get current gas
+	var/datum/gas_mixture/gas = jpack.return_air()
+	gas.assert_gas(jpack.gas_type)
+	// quadruple it and give it to the next jetpack
+	gas.gases[jpack.gas_type][MOLES] += ((24 * ONE_ATMOSPHERE) * jpack.volume / (R_IDEAL_GAS_EQUATION * T20C))
+	jpack.desc += span_notice(" \n Though it definetly seems to have enlarged in proportions when I took it from the box..")
+	new /obj/item/clothing/suit/space(src)
+	new /obj/item/clothing/head/helmet/space(src)
+	new /obj/item/tank/internals/oxygen(src)
+	new /obj/item/storage/medkit/advanced(src)
+	new /obj/item/storage/belt/utility/full(src)
+	new /obj/item/knife/combat/survival(src)
+	new /obj/item/gun/energy/e_gun/mini(src)
+	new /obj/item/case_portable_recharger(src)
+	new /obj/item/manual_cell_recharger(src)
+	new /obj/item/stock_parts/servo/pico(src)
+
 /datum/metacoinshop/listing/preround/antag_token
 	id = "antag_token"
 	name = "Antag Token"
