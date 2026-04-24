@@ -8,8 +8,36 @@
 	var/icon
 	var/icon_state
 
+/// Is called after a successful purchase.
+/datum/metacoinshop/listing/proc/on_bought(datum/metacoin_shop_controller/shop, target_ckey, mob/player_mob, client/player_client, balance_after, role_id = null)
+	return TRUE
+// here lies any additional logic you might want to add, mainly, I added it because I wanted to see a cool announcement when wycc's soul is bought
+
+/datum/metacoinshop/listing/proc/bought_on_spawn(datum/metacoin_shop_controller/shop, target_ckey, mob/living/carbon/human/human_spawned, obj/item/item, client/player_client)
+	return
+
+// It's like the same ^^^ but you may edit variables of stuff in params, like human_spawned or item. e.g you may buy a baton, \
+then have it variable edit'ed like so item.force = 25, potentially escaping any additional hardcode or unneeded bloat
+
+/datum/metacoinshop/listing/proc/persistent_grant(datum/metacoin_shop_controller/shop, target_ckey, mob/living/spawned, client/player_client)
+	return
+// it's persistenly repeated code on each round if the ss.db.query() returns true whether something's been bought, use it for any effects on demand
+// later on we'll add a preference flag to disable bought items on demand
+
 /datum/metacoinshop/listing/preround
 
+/*
+/datum/metacoinshop/listing/preround/donut_box/on_bought(datum/metacoin_shop_controller/shop, target_ckey, mob/player_mob, client/player_client, balance_after, role_id = null)
+	to_chat(player_mob, span_green("success! die!")) // no idea why's there mob/player mob in params, but it's there, it exists! and it matters!
+
+/datum/metacoinshop/listing/preround/donut_box/bought_on_spawn(datum/metacoin_shop_controller/shop, target_ckey, mob/living/carbon/human/human_spawned, obj/item/item, client/player_client)
+	to_chat(human_spawned, span_green("success!"))
+	sleep(20)
+	to_chat(human_spawned, span_red("die!"))
+	sleep(10)
+	human_spawned.gib()// DIE!
+
+*/
 /datum/metacoinshop/listing/preround/donut_box
 	id = "donut_box"
 	name = "Donut Box"
@@ -49,7 +77,7 @@
 	var/obj/item/stack/medical/mesh/mesh = new /obj/item/stack/medical/mesh(src)
 	mesh.amount = 10
 	var/obj/item/stock_parts/power_store/cell/high/cell = new /obj/item/stock_parts/power_store/cell/high(src)
-	cell.charge = 10000 // the fuck is a cell unit? a thousand I guess? cuz hundred is 0.1%
+	cell.charge = 10000 // the fuck is a cell unit? ten thousand I guess? because after test a hundred is turned to be 0.1%
 	var/obj/item/tank/jetpack/jpack = new /obj/item/tank/jetpack(src)
 	//get current gas
 	var/datum/gas_mixture/gas = jpack.return_air() // bitch it's literally oxygen

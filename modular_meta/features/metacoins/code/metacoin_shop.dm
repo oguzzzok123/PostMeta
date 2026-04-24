@@ -15,6 +15,7 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 
 /datum/metacoin_shop_controller
 	var/list/preround_catalog = list()
+	var/list/persistent_catalog = list()
 	var/list/preround_pending_by_ckey = list()
 	var/list/preround_delivered_by_ckey = list()
 	var/list/antag_token_pending_by_ckey = list()
@@ -36,6 +37,16 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 			listing.icon_state = initial(type_cast_item_path.icon_state)
 
 		preround_catalog[listing.id] = listing
+
+	persistent_catalog = alist()
+	for(var/listing_path in subtypesof(/datum/metacoinshop/listing/persistent))
+		var/datum/metacoinshop/listing/listing = new listing_path
+		if(listing.item_type && !listing.icon)
+			var/obj/item/type_cast_item_path = listing.item_type
+			listing.icon = initial(type_cast_item_path.icon)
+			listing.icon_state = initial(type_cast_item_path.icon_state)
+
+		persistent_catalog[listing.id] = listing
 
 /datum/metacoin_shop_controller/proc/register_signals()
 	if(signals_registered)
@@ -318,27 +329,32 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 	for(var/target_ckey in ckeys_to_refund)
 		refund_token(target_ckey, null, null)
 
-/datum/metacoin_shop_controller/proc/get_catalog_ui(target_ckey)
+/datum/metacoin_shop_controller/proc/catalog_ui(target_ckey, kind = "preround")
 	var/list/catalog_data = list()
-	var/list/pending_items = get_pending_items(target_ckey)
+	var/list/catalog = kind == "persistent" ? persistent_catalog : preround_catalog
+	var/list/pending_items = kind == "preround" ? get_pending_items(target_ckey) : list()
+	var/list/owned_items = kind == "persistent" ? owned_persistent(target_ckey) : null
 	var/selected_antag_role = antag_token_pending_by_ckey[target_ckey]
 	var/balance = fetch_balance(target_ckey)
 
-	for(var/listing_id in preround_catalog)
-		var/datum/metacoinshop/listing/listing = preround_catalog[listing_id]
+	for(var/listing_id in catalog)
+		var/datum/metacoinshop/listing/listing = catalog[listing_id]
 		if(!listing)
 			continue
 
 		var/is_antag_token = listing.id == "antag_token"
+		var/is_persistent = listing.listing_type == "persistent"
 		var/is_owned = FALSE
 		if(is_antag_token)
 			is_owned = !isnull(selected_antag_role)
+		else if(is_persistent)
+			is_owned = !!owned_items?[listing.id]
 		else
 			is_owned = (listing.id in pending_items)
 
 		var/list/listing_payload = list(
 			"id" = listing.id,
-			"kind" = is_antag_token ? "antag_token" : "item",
+			"kind" = is_antag_token ? "antag_token" : listing.listing_type,
 			"name" = listing.name,
 			"desc" = listing.desc,
 			"price" = listing.price,
@@ -357,6 +373,105 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 		catalog_data += list(listing_payload)
 
 	return catalog_data
+
+/datum/metacoin_shop_controller/proc/owned_persistent(target_ckey)
+	target_ckey = ckey(target_ckey)
+	if(!target_ckey)
+		return list()
+
+	if(!SSdbcore.Connect())
+		return null
+
+	var/table_purchases = format_table_name("metacoin_purchases")
+	var/datum/db_query/select_query = SSdbcore.NewQuery(
+		"SELECT listing FROM [table_purchases] WHERE ckey = :ckey AND owned = TRUE",
+		list("ckey" = target_ckey),
+	)
+
+	if(!select_query.warn_execute(async = FALSE))
+		qdel(select_query)
+		return null
+
+	var/list/owned_items = list()
+	while(select_query.NextRow(async = FALSE))
+		var/listing_id = select_query.item[1]
+		if(listing_id)
+			owned_items[listing_id] = TRUE
+
+	qdel(select_query)
+	return owned_items
+
+/datum/metacoin_shop_controller/proc/owns_persistent(target_ckey, listing_id)
+	target_ckey = ckey(target_ckey)
+	if(!target_ckey || !listing_id)
+		return FALSE
+
+	if(!SSdbcore.Connect())
+		return null
+
+	var/table_purchases = format_table_name("metacoin_purchases")
+	var/datum/db_query/select_query = SSdbcore.NewQuery(
+		"SELECT owned FROM [table_purchases] WHERE ckey = :ckey AND listing = :listing LIMIT 1",
+		list(
+			"ckey" = target_ckey,
+			"listing" = listing_id,
+		),
+	)
+
+	if(!select_query.warn_execute(async = FALSE))
+		qdel(select_query)
+		return null
+
+	var/is_owned = FALSE
+	if(select_query.NextRow(async = FALSE))
+		is_owned = text2num("[select_query.item[1]]") > 0
+
+	qdel(select_query)
+	return is_owned
+
+/// You may use this to manually set any listing_id to TRUE or FALSE. upsert queries add new lines in a table, so there "shall" be no issues with it
+/datum/metacoin_shop_controller/proc/set_persistent(target_ckey, listing_id, owned = TRUE)
+	target_ckey = ckey(target_ckey)
+	if(!target_ckey || !listing_id)
+		return FALSE
+
+	if(!SSdbcore.Connect())
+		return FALSE
+
+	var/table_purchases = format_table_name("metacoin_purchases")
+	var/datum/db_query/upsert_query = SSdbcore.NewQuery(
+		"INSERT INTO [table_purchases] (ckey, listing, owned) VALUES (:ckey, :listing, :owned) ON DUPLICATE KEY UPDATE owned = VALUES(owned)",
+		list(
+			"ckey" = target_ckey,
+			"listing" = listing_id,
+			"owned" = owned ? TRUE : FALSE,
+		),
+	)
+
+	if(!upsert_query.warn_execute(async = FALSE))
+		qdel(upsert_query)
+		return FALSE
+
+	qdel(upsert_query)
+	return TRUE
+
+/datum/metacoin_shop_controller/proc/grant_persistents(target_ckey, mob/living/spawned, client/player_client)
+	target_ckey = ckey(target_ckey)
+	if(!target_ckey)
+		return FALSE
+
+	var/list/owned_items = owned_persistent(target_ckey)
+	if(isnull(owned_items))
+		return FALSE
+
+	for(var/listing_id in owned_items)
+		var/datum/metacoinshop/listing/listing = persistent_catalog[listing_id]
+		if(!listing)
+			continue
+
+		listing.persistent_grant(src, target_ckey, spawned, player_client)
+
+	return TRUE
 
 /datum/metacoin_shop_controller/proc/get_pending_items(target_ckey)
 	if(!target_ckey)
@@ -456,72 +571,79 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 		"balance" = new_balance,
 	)
 
-/datum/metacoin_shop_controller/proc/buy_item(target_ckey, item_id)
+/datum/metacoin_shop_controller/proc/buy(target_ckey, item_id, role_id = null, client/player_client = null)
+	target_ckey = ckey(target_ckey || player_client?.ckey)
 	if(!target_ckey || !item_id)
 		return list("ok" = FALSE, "error" = "invalid_request")
 
-	if(!is_open())
-		return list("ok" = FALSE, "error" = "shop_closed")
+	var/datum/metacoinshop/listing/listing = persistent_catalog[item_id]
+	if(!listing)
+		listing = preround_catalog[item_id]
 
-	var/datum/metacoinshop/listing/listing = preround_catalog[item_id]
 	if(!listing)
 		return list("ok" = FALSE, "error" = "unknown_item")
 
-	if(listing.listing_type != "item")
+	var/mob/player_mob = player_client?.mob || get_mob_by_ckey(target_ckey)
+	var/list/take
+
+	if(listing.listing_type == "persistent")
+		var/is_owned = owns_persistent(target_ckey, item_id)
+		if(isnull(is_owned))
+			return list("ok" = FALSE, "error" = "db_unavailable")
+
+		if(is_owned)
+			return list("ok" = FALSE, "error" = "already_owned")
+
+		take = take_metacoins(target_ckey, listing.price)
+		if(!take["ok"])
+			return take
+
+		if(!set_persistent(target_ckey, item_id, TRUE))
+			if(!add_metacoins(target_ckey, listing.price))
+				log_game("[src] persistent purchase refund failed: ckey=[target_ckey], listing=[item_id], price=[listing.price].")
+			return list("ok" = FALSE, "error" = "db_failed")
+
+		listing.on_bought(src, target_ckey, player_mob, player_client, take["balance"])
+
+		if(player_mob)
+			to_chat(player_mob, span_boldnicegreen("Purchased [listing.name] for [listing.price] metacoins."))
+			player_mob.playsound_local(player_mob, 'sound/effects/kaching.ogg', 40, TRUE, use_reverb = FALSE)
+			SStgui.update_user_uis(player_mob)
+
+		return list("ok" = TRUE)
+
+	if(listing.listing_type == "item")
+		if(!is_open())
+			return list("ok" = FALSE, "error" = "shop_closed")
+
+		var/list/pending_items = preround_pending_by_ckey[target_ckey]
+		if(!islist(pending_items))
+			pending_items = list()
+			preround_pending_by_ckey[target_ckey] = pending_items
+
+		if(item_id in pending_items)
+			return list("ok" = FALSE, "error" = "already_owned")
+
+		take = take_metacoins(target_ckey, listing.price)
+		if(!take["ok"])
+			return take
+
+		pending_items += item_id
+
+		listing.on_bought(src, target_ckey, player_mob, player_client, take["balance"])
+
+		if(player_mob)
+			to_chat(player_mob, span_boldnicegreen("Purchased [listing.name] for [listing.price] metacoins. It will be delivered on first roundstart spawn."))
+			player_mob.playsound_local(player_mob, 'sound/effects/kaching.ogg', 40, TRUE, use_reverb = FALSE)
+			SStgui.update_user_uis(player_mob)
+
+		return list("ok" = TRUE)
+
+	if(listing.id != "antag_token")
+		return list("ok" = FALSE, "error" = "unknown_item")
+
+	if(!role_id)
 		return list("ok" = FALSE, "error" = "open_antag_panel")
-
-	var/list/pending_items = preround_pending_by_ckey[target_ckey]
-	if(!islist(pending_items))
-		pending_items = list()
-		preround_pending_by_ckey[target_ckey] = pending_items
-
-	if(item_id in pending_items)
-		return list("ok" = FALSE, "error" = "already_owned")
-
-	if(!SSdbcore.Connect())
-		return list("ok" = FALSE, "error" = "db_unavailable")
-
-	var/current_balance = fetch_balance(target_ckey)
-	if(isnull(current_balance))
-		return list("ok" = FALSE, "error" = "db_unavailable")
-
-	if(current_balance < listing.price)
-		return list("ok" = FALSE, "error" = "not_enough")
-
-	var/table_player = format_table_name("player")
-	var/datum/db_query/buy_query = SSdbcore.NewQuery(
-		"UPDATE [table_player] SET metacoins = metacoins - :price WHERE ckey = :ckey AND metacoins >= :price",
-		list(
-			"price" = listing.price,
-			"ckey" = target_ckey,
-		),
-	)
-
-	if(!buy_query.warn_execute(async = FALSE))
-		qdel(buy_query)
-		return list("ok" = FALSE, "error" = "db_failed")
-	qdel(buy_query)
-
-	var/new_balance = fetch_balance(target_ckey)
-	if(isnull(new_balance))
-		return list("ok" = FALSE, "error" = "db_failed")
-
-	if(new_balance > (current_balance - listing.price))
-		return list("ok" = FALSE, "error" = "not_enough")
-
-	pending_items += item_id
-
-	var/mob/player_mob = get_mob_by_ckey(target_ckey)
-	if(player_mob)
-		to_chat(player_mob, span_boldnicegreen("Purchased [listing.name] for [listing.price] metacoins. It will be delivered on first roundstart spawn."))
-		player_mob.playsound_local(player_mob, 'sound/effects/kaching.ogg', 40, TRUE, use_reverb = FALSE)
-		SStgui.update_user_uis(player_mob)
-
-	return list("ok" = TRUE)
-
-/datum/metacoin_shop_controller/proc/buy_token(target_ckey, role_id)
-	if(!target_ckey || !role_id)
-		return list("ok" = FALSE, "error" = "invalid_request")
 
 	if(!is_open())
 		return list("ok" = FALSE, "error" = "shop_closed")
@@ -536,47 +658,18 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 	if(block_info)
 		return list("ok" = FALSE, "error" = block_info["code"])
 
-	var/datum/metacoinshop/listing/listing = get_token_listing()
-	if(!listing)
-		return list("ok" = FALSE, "error" = "unknown_item")
-
-	if(!SSdbcore.Connect())
-		return list("ok" = FALSE, "error" = "db_unavailable")
-
-	var/current_balance = fetch_balance(target_ckey)
-	if(isnull(current_balance))
-		return list("ok" = FALSE, "error" = "db_unavailable")
-
-	if(current_balance < listing.price)
-		return list("ok" = FALSE, "error" = "not_enough")
-
-	var/table_player = format_table_name("player")
-	var/datum/db_query/buy_query = SSdbcore.NewQuery(
-		"UPDATE [table_player] SET metacoins = metacoins - :price WHERE ckey = :ckey AND metacoins >= :price",
-		list(
-			"price" = listing.price,
-			"ckey" = target_ckey,
-		),
-	)
-
-	if(!buy_query.warn_execute(async = FALSE))
-		qdel(buy_query)
-		return list("ok" = FALSE, "error" = "db_failed")
-	qdel(buy_query)
-
-	var/new_balance = fetch_balance(target_ckey)
-	if(isnull(new_balance))
-		return list("ok" = FALSE, "error" = "db_failed")
-
-	if(new_balance > (current_balance - listing.price))
-		return list("ok" = FALSE, "error" = "not_enough")
+	take = take_metacoins(target_ckey, listing.price)
+	if(!take["ok"])
+		return take
 
 	antag_token_pending_by_ckey[target_ckey] = role_id
 	antag_token_slots_left = max(antag_token_slots_left - 1, 0)
 	var/role_name = get_role_name(role_id)
-	log_game("[src] antag token purchase: ckey=[target_ckey], role=[role_id]/[role_name], price=[listing.price], balance_before=[current_balance], balance_after=[new_balance], slots_left=[antag_token_slots_left].")
+	var/balance_after = take["balance"]
+	log_game("[src] antag token purchase: ckey=[target_ckey], role=[role_id]/[role_name], price=[listing.price], balance_after=[balance_after], slots_left=[antag_token_slots_left].")
 
-	var/mob/player_mob = get_mob_by_ckey(target_ckey)
+	listing.on_bought(src, target_ckey, player_mob, player_client, balance_after, role_id)
+
 	if(player_mob)
 		to_chat(player_mob, span_boldnicegreen("Purchased Antag Token ([role_name]) for [listing.price] metacoins. It will be applied at roundstart."))
 		player_mob.playsound_local(player_mob, 'sound/effects/kaching.ogg', 40, TRUE, use_reverb = FALSE)
@@ -725,6 +818,7 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 		return
 
 	grant_token_on_spawn(target_ckey, spawned, player_client)
+	grant_persistents(target_ckey, spawned, player_client)
 
 	if(!ishuman(spawned))
 		return
@@ -744,6 +838,7 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 			continue
 
 		var/obj/item/new_item = new listing.item_type(human_spawned)
+		listing.bought_on_spawn(src, target_ckey, human_spawned, new_item, player_client)
 		if(human_spawned.back?.atom_storage?.attempt_insert(new_item, human_spawned, override = TRUE))
 			continue
 
@@ -784,8 +879,8 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 	data["isPregame"] = shop.is_open()
 	data["balance"] = isnull(balance) ? 0 : balance
 	data["antagTokenSlotsLeft"] = shop.get_token_slots()
-	data["preroundItems"] = shop.get_catalog_ui(client_ckey)
-	data["persistentItems"] = list()
+	data["preroundItems"] = shop.catalog_ui(client_ckey)
+	data["persistentItems"] = shop.catalog_ui(client_ckey, "persistent")
 
 	return data
 
@@ -807,7 +902,7 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 		if(!target_item)
 			return FALSE
 
-		var/result = get_metacoin_controller().buy_item(owner?.ckey, target_item)
+		var/result = get_metacoin_controller().buy(owner?.ckey, target_item, null, owner)
 		if(!result["ok"])
 			var/mob/user_mob = ui?.user
 			if(user_mob)
@@ -832,6 +927,32 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 						user_mob.playsound_local(user_mob, 'sound/machines/compiler/compiler-failure.ogg', 40, TRUE, use_reverb = FALSE)
 			return FALSE
 //those exist justin cause ^^
+		return TRUE
+
+	if(action == "buy_persistent")
+		var/target_item = params["itemId"]
+		if(!target_item)
+			return FALSE
+
+		var/result = get_metacoin_controller().buy(owner?.ckey, target_item, null, owner)
+		if(!result["ok"])
+			var/mob/user_mob = ui?.user
+			if(user_mob)
+				switch(result["error"])
+					if("already_owned")
+						to_chat(user_mob, span_warning("You already own this persistent reward."))
+						user_mob.playsound_local(user_mob, 'sound/machines/compiler/compiler-failure.ogg', 40, TRUE, use_reverb = FALSE)
+					if("not_enough")
+						to_chat(user_mob, span_warning("Not enough metacoins."))
+						user_mob.playsound_local(user_mob, 'sound/machines/compiler/compiler-failure.ogg', 40, TRUE, use_reverb = FALSE)
+					if("db_unavailable", "db_failed")
+						to_chat(user_mob, span_warning("Database error. Try again later."))
+						user_mob.playsound_local(user_mob, 'sound/machines/compiler/compiler-failure.ogg', 40, TRUE, use_reverb = FALSE)
+					else
+						to_chat(user_mob, span_warning("Purchase failed."))
+						user_mob.playsound_local(user_mob, 'sound/machines/compiler/compiler-failure.ogg', 40, TRUE, use_reverb = FALSE)
+			return FALSE
+
 		return TRUE
 
 	return FALSE
@@ -885,7 +1006,7 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 		if(!role_id)
 			return FALSE
 
-		var/result = get_metacoin_controller().buy_token(owner?.ckey, role_id)
+		var/result = get_metacoin_controller().buy(owner?.ckey, "antag_token", role_id, owner)
 		if(result["ok"])
 			return TRUE
 
