@@ -52,7 +52,7 @@
 	cell.charge = 10000 // the fuck is a cell unit? a thousand I guess? cuz hundred is 0.1%
 	var/obj/item/tank/jetpack/jpack = new /obj/item/tank/jetpack(src)
 	//get current gas
-	var/datum/gas_mixture/gas = jpack.return_air()
+	var/datum/gas_mixture/gas = jpack.return_air() // bitch it's literally oxygen
 	gas.assert_gas(jpack.gas_type)
 	// quadruple it and give it to the next jetpack
 	gas.gases[jpack.gas_type][MOLES] += ((24 * ONE_ATMOSPHERE) * jpack.volume / (R_IDEAL_GAS_EQUATION * T20C))
@@ -67,6 +67,7 @@
 	new /obj/item/case_portable_recharger(src)
 	new /obj/item/manual_cell_recharger(src)
 	new /obj/item/stock_parts/servo/pico(src)
+	new /obj/item/flashlight/seclite(src)
 
 /datum/metacoinshop/listing/preround/antag_token
 	id = "antag_token"

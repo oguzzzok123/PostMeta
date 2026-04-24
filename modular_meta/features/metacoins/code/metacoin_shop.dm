@@ -925,5 +925,3 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 	set desc = "Open metacoin shop window."
 
 	new /datum/metacoin_shop_panel(src, usr)
-
-//TODO: Admin logs, paid metacoin deathmath matches, prettier ui, background change, more sounds upon clicks,
