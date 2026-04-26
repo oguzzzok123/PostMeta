@@ -99,8 +99,9 @@ then have it variable edit'ed like so item.force = 25, potentially escaping any 
 
 /datum/metacoinshop/listing/preround/self_surgery
 	id = "surgery"
-	name = "surgeon"
-	desc = "surg"
+	name = "4U70-P3R4710N skillchip"
+	desc = "A skillchip containing old Nanotrasen medical training protocols, which one could use to perform surgical operations on themselves. \
+	This one is new, I'd say, \"almost pristine condition.\" It will be already implanted in your brain upon purchause and your arrival."
 	price = 250
 	item_type = /obj/item/skillchip/self_surgery
 	listing_type = "other"
