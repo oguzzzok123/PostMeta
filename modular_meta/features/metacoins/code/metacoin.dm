@@ -69,12 +69,9 @@ GLOBAL_DATUM(metacoins_controller, /datum/metacoins_controller)
 
 		processed_ckeys[player_ckey] = TRUE
 
-		if(METACOIN_REWARD_SURVIVE_EVAC > 0 && is_evacuation_condition_met(player_ckey))
-			award_metacoins(player_ckey, METACOIN_REWARD_SURVIVE_EVAC, "survived_shift", "Survived Shift")
-		if(METACOIN_REWARD_IMPORTANT_JOBS > 0 && is_important_role(player_ckey))
-			award_metacoins(player_ckey, METACOIN_REWARD_IMPORTANT_JOBS, "social_role", "Highly Important Role")
-		if(METACOIN_REWARD_ANTAG_GREENTEXT > 0 && is_antag_greentext(player_ckey))
-			award_metacoins(player_ckey, METACOIN_REWARD_ANTAG_GREENTEXT, "antag_greentext", "Antagonist Greentext")
+		var/list/rewards = get_round_rewards(player_ckey)
+		if(length(rewards))
+			award_entries(player_ckey, rewards)
 /// Main proc for your awards. Integrate it wherever you like to
 ///
 /// Arguments:
@@ -95,8 +92,17 @@ GLOBAL_DATUM(metacoins_controller, /datum/metacoins_controller)
 	if(!target_ckey || amount <= 0)
 		return FALSE
 
-	var/sanitized_source = source || "unknown"
-	var/sanitized_reason = reason || "Reward"
+	var/list/rewards = list(list(
+		"amount" = amount,
+		"source" = source || "unknown",
+		"reason" = reason || "Reward",
+		"by_award_type" = resolve_from_award_type,
+	))
+	return award_entries(target_ckey, rewards, allow_repeat, sound)
+
+/datum/metacoins_controller/proc/award_entries(target_ckey, list/rewards, allow_repeat = FALSE, sound = TRUE)
+	if(!target_ckey || !length(rewards))
+		return FALSE
 
 	var/list/source_awards
 	if(!allow_repeat)
@@ -105,34 +111,76 @@ GLOBAL_DATUM(metacoins_controller, /datum/metacoins_controller)
 			source_awards = list()
 			awarded_sources_by_ckey[target_ckey] = source_awards
 
-		if(source_awards[sanitized_source])
-			return FALSE
+	var/total_amount = 0
+	var/list/pay_rewards = list()
+	for(var/list/reward_entry as anything in rewards)
+		var/amount = reward_entry["amount"] || 0
+		if(amount <= 0)
+			continue
 
-	if(!SSdbcore.Connect())
+		var/sanitized_source = reward_entry["source"] || "unknown"
+		var/sanitized_reason = reward_entry["reason"] || "Reward"
+		if(!allow_repeat && source_awards[sanitized_source])
+			log_game("[src] metacoin payout skipped: ckey=[target_ckey], amount=[amount], source='[sanitized_source]', reason='[sanitized_reason]', cause='duplicate source'.")
+			continue
+
+		pay_rewards += list(list(
+			"amount" = amount,
+			"source" = sanitized_source,
+			"reason" = sanitized_reason,
+			"by_award_type" = reward_entry["by_award_type"] || FALSE,
+		))
+		total_amount += amount
+
+	if(total_amount <= 0)
 		return FALSE
 
-	if(!add_metacoins(target_ckey, amount))
+	if(!SSdbcore.Connect())
+		log_game("[src] metacoin payout failed: ckey=[target_ckey], amount=[total_amount], cause='db unavailable', rewards=[json_encode(pay_rewards)].")
+		return FALSE
+
+	if(!add_metacoins(target_ckey, total_amount))
+		log_game("[src] metacoin payout failed: ckey=[target_ckey], amount=[total_amount], cause='update failed', rewards=[json_encode(pay_rewards)].")
 		return FALSE
 
 	if(!allow_repeat)
-		source_awards[sanitized_source] = TRUE
+		for(var/list/reward_entry as anything in pay_rewards)
+			source_awards[reward_entry["source"]] = TRUE
 
-	log_game("[src] metacoin payout: ckey=[target_ckey], amount=[amount], source='[sanitized_source]', reason='[sanitized_reason]', allow_repeat=[allow_repeat], by_award_type=[resolve_from_award_type].")
+	log_game("[src] metacoin payout: ckey=[target_ckey], amount=[total_amount], allow_repeat=[allow_repeat], rewards=[json_encode(pay_rewards)].")
 
-	add_round_award_log_entry(target_ckey, amount, sanitized_source, sanitized_reason)
+	for(var/list/reward_entry as anything in pay_rewards)
+		add_round_award_log_entry(target_ckey, reward_entry["amount"], reward_entry["source"], reward_entry["reason"])
 
-	var/list/reward_entries = list(list(
-		"amount" = amount,
-		"source" = sanitized_source,
-		"reason" = sanitized_reason,
-	))
-	notify_player_reward_awarded(target_ckey, amount, reward_entries, sound)
+	notify_player_reward_awarded(target_ckey, total_amount, pay_rewards, sound)
 
 	var/mob/player_mob = get_mob_by_ckey(target_ckey)
 	if(player_mob)
 		SStgui.update_user_uis(player_mob)
 
 	return TRUE
+
+/datum/metacoins_controller/proc/get_round_rewards(target_ckey)
+	var/list/rewards = list()
+	if(METACOIN_REWARD_SURVIVE_EVAC > 0 && is_evacuation_condition_met(target_ckey))
+		rewards += list(list(
+			"amount" = METACOIN_REWARD_SURVIVE_EVAC,
+			"source" = "survived_shift",
+			"reason" = "Survived Shift",
+		))
+	if(METACOIN_REWARD_IMPORTANT_JOBS > 0 && is_important_role(target_ckey))
+		rewards += list(list(
+			"amount" = METACOIN_REWARD_IMPORTANT_JOBS,
+			"source" = "social_role",
+			"reason" = "Highly Important Role",
+		))
+	if(METACOIN_REWARD_ANTAG_GREENTEXT > 0 && is_antag_greentext(target_ckey))
+		rewards += list(list(
+			"amount" = METACOIN_REWARD_ANTAG_GREENTEXT,
+			"source" = "antag_greentext",
+			"reason" = "Antagonist Greentext",
+		))
+	return rewards
 
 /datum/metacoins_controller/proc/get_reward_amount(award_type)
 	if(!ispath(award_type, /datum/award))
@@ -222,7 +270,7 @@ GLOBAL_DATUM(metacoins_controller, /datum/metacoins_controller)
 	if(!player_turf)
 		return FALSE
 
-	if(player_turf.onCentCom())
+	if(player_turf.onCentCom() || player_turf.onSyndieBase() || player_turf.on_escaped_shuttle())
 		return TRUE
 
 	return !!SSshuttle.emergency.shuttle_areas[player_area]
@@ -298,8 +346,9 @@ GLOBAL_DATUM(metacoins_controller, /datum/metacoins_controller)
 	)
 
 	var/success = update_query.warn_execute(async = FALSE)
+	var/affected = update_query.affected
 	qdel(update_query)
-	return success
+	return success && affected > 0
 
 /datum/metacoins_panel
 	var/client/owner
