@@ -97,6 +97,18 @@ then have it variable edit'ed like so item.force = 25, potentially escaping any 
 	new /obj/item/stock_parts/servo/pico(src)
 	new /obj/item/flashlight/seclite(src)
 
+/datum/metacoinshop/listing/preround/self_surgery
+	id = "surgery"
+	name = "surgeon"
+	desc = "surg"
+	price = 250
+	item_type = /obj/item/skillchip/self_surgery
+	listing_type = "other"
+
+/datum/metacoinshop/listing/preround/self_surgery/bought_on_spawn(datum/metacoin_shop_controller/shop, target_ckey, mob/living/carbon/human/human_spawned, obj/item/item, client/player_client)
+	var/obj/item/skillchip/skillchip = new item_type()
+	human_spawned.implant_skillchip(skillchip, TRUE)
+
 /datum/metacoinshop/listing/preround/antag_token
 	id = "antag_token"
 	name = "Antag Token"

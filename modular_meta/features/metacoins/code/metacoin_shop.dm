@@ -612,7 +612,7 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 
 		return list("ok" = TRUE)
 
-	if(listing.listing_type == "item")
+	if(listing.listing_type == "item" || (listing.listing_type == "other" && listing.id != "antag_token"))
 		if(!is_open())
 			return list("ok" = FALSE, "error" = "shop_closed")
 
@@ -633,7 +633,8 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 		listing.on_bought(src, target_ckey, player_mob, player_client, take["balance"])
 
 		if(player_mob)
-			to_chat(player_mob, span_boldnicegreen("Purchased [listing.name] for [listing.price] metacoins. It will be delivered on first roundstart spawn."))
+			var/delivery_text = listing.listing_type == "item" ? "delivered" : "applied"
+			to_chat(player_mob, span_boldnicegreen("Purchased [listing.name] for [listing.price] metacoins. It will be [delivery_text] on first roundstart spawn."))
 			player_mob.playsound_local(player_mob, 'sound/effects/kaching.ogg', 40, TRUE, use_reverb = FALSE)
 			SStgui.update_user_uis(player_mob)
 
@@ -834,7 +835,14 @@ GLOBAL_DATUM(metacoin_shop_controller, /datum/metacoin_shop_controller)
 
 	for(var/item_id in pending_items)
 		var/datum/metacoinshop/listing/listing = preround_catalog[item_id]
-		if(listing?.listing_type != "item" || !listing?.item_type)
+		if(!listing)
+			continue
+
+		if(listing.listing_type == "other")
+			listing.bought_on_spawn(src, target_ckey, human_spawned, null, player_client)
+			continue
+
+		if(listing.listing_type != "item" || !listing.item_type)
 			continue
 
 		var/obj/item/new_item = new listing.item_type(human_spawned)
