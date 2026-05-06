@@ -61,7 +61,7 @@
 				if(prob(66))
 					target.emote("scream")
 					if(prob(10))
-						target.adjust_organ_loss(ORGAN_SLOT_BRAIN, BRAIN_DAMAGE_DEATH - 1, BRAIN_DAMAGE_DEATH - 1)
+						target.adjust_organ_loss(ORGAN_SLOT_BRAIN, BRAIN_DAMAGE_MILD - 1, BRAIN_DAMAGE_ASYNC_BLINKING - 1)
 						if(prob(66))
 							target.emote("cry")
 						if(prob(6))
