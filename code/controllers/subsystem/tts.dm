@@ -31,6 +31,11 @@ SUBSYSTEM_DEF(tts)
 	/// A list of available speakers, which are string identifiers of the TTS voices that can be used to generate TTS messages.
 	var/list/available_speakers = list()
 
+	// MASSMETA EDIT START (ntts && /tg/tts)
+	/// TTS voice categories.
+	var/list/voice_categories = list()
+	// MASSMETA EDIT END (ntts && /tg/tts)
+
 	/// Whether TTS is enabled or not
 	var/tts_enabled = FALSE
 	/// Whether the TTS engine supports pitch adjustment or not.
@@ -70,6 +75,7 @@ SUBSYSTEM_DEF(tts)
 // MASSMETA EDIT START (ntts && /tg/tts) // for any coder out there, saying that I could've done it in modular modpacks section, uh - I'm too lazy okay, I've been struggling with the tts for too long
 /datum/controller/subsystem/tts/proc/parse_speakers(response_body, source_endpoint = "unknown")
 	var/list/speakers = list()
+	voice_categories = list()
 	var/decoded = safe_json_decode(response_body)
 	if(!islist(decoded))
 		var/body_preview = istext(response_body) ? copytext(response_body, 1, 161) : "<non-text body>"
@@ -91,12 +97,28 @@ SUBSYSTEM_DEF(tts)
 			var/speaker_name = voice_speakers[1]
 			if(istext(speaker_name))
 				speakers += speaker_name
+				// MASSMETA EDIT START (ntts && /tg/tts)
+				voice_categories[speaker_name] = voice_data["category"] || "other"
+				// MASSMETA EDIT END (ntts && /tg/tts)
 		return speakers
 
 	for(var/speaker_index in 1 to length(decoded))
 		var/speaker_name = decoded[speaker_index]
 		if(istext(speaker_name))
 			speakers += speaker_name
+			// MASSMETA EDIT START (ntts && /tg/tts)
+			voice_categories[speaker_name] = "other"
+			// MASSMETA EDIT END (ntts && /tg/tts)
+		// MASSMETA EDIT START (ntts && /tg/tts)
+		if(!islist(speaker_name))
+			continue
+		var/list/speaker_data = speaker_name
+		speaker_name = speaker_data["name"] || speaker_data["speaker"]
+		if(!istext(speaker_name))
+			continue
+		speakers += speaker_name
+		voice_categories[speaker_name] = speaker_data["category"] || "other"
+		// MASSMETA EDIT END (ntts && /tg/tts)
 
 	return speakers
 
@@ -107,6 +129,7 @@ SUBSYSTEM_DEF(tts)
 	headers["Authorization"] = CONFIG_GET(string/tts_http_token)
 	// MASSMETA EDIT START (ntts && /tg/tts)
 	available_speakers = list()
+	voice_categories = list()
 	legacy_api = FALSE
 	var/list/speaker_endpoints = list("tts-voices", "speakers")
 	var/datum/http_response/last_response
@@ -163,6 +186,9 @@ SUBSYSTEM_DEF(tts)
 			if(available_speakers.Find(voice))
 				log_config("Removed speaker [voice] from the TTS voice pool per config.")
 				available_speakers.Remove(voice)
+				// MASSMETA EDIT START (ntts && /tg/tts)
+				voice_categories.Remove(voice)
+				// MASSMETA EDIT END (ntts && /tg/tts)
 	if(CONFIG_GET(string/tts_tram_announcer_override))
 		tram_voice = CONFIG_GET(string/tts_tram_announcer_override)
 	else
