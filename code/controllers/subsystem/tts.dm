@@ -40,11 +40,6 @@ SUBSYSTEM_DEF(tts)
 	var/tts_enabled = FALSE
 	/// Whether the TTS engine supports pitch adjustment or not.
 	var/pitch_enabled = FALSE
-	// MASSMETA EDIT START (ntts && /tg/tts)
-	/// HELLO VALTOS, IT'S TTSensky WE NEED 5 BILLION REQUESTS
-	var/legacy_api = FALSE
-	// MASSMETA EDIT END (ntts && /tg/tts)
-
 	/// TTS messages won't play if requests took longer than this duration of time.
 	var/message_timeout = 25 SECONDS
 
@@ -86,9 +81,9 @@ SUBSYSTEM_DEF(tts)
 		return speakers
 // MASSMETA EDIT END (ntts && /tg/tts)
 
-	var/list/legacy_voices = decoded["voices"]
-	if(islist(legacy_voices))
-		for(var/list/voice_data in legacy_voices)
+	var/list/voice_groups = decoded["voices"]
+	if(islist(voice_groups))
+		for(var/list/voice_data in voice_groups)
 			if(!islist(voice_data))
 				continue
 			var/list/voice_speakers = voice_data["speakers"]
@@ -130,7 +125,6 @@ SUBSYSTEM_DEF(tts)
 	// MASSMETA EDIT START (ntts && /tg/tts)
 	available_speakers = list()
 	voice_categories = list()
-	legacy_api = FALSE
 	var/list/speaker_endpoints = list("tts-voices", "speakers")
 	var/datum/http_response/last_response
 	for(var/endpoint in speaker_endpoints)
@@ -156,7 +150,6 @@ SUBSYSTEM_DEF(tts)
 
 		available_speakers = parse_speakers(response.body, endpoint)
 		if(length(available_speakers))
-			legacy_api = (endpoint == "speakers")
 			break
 
 	if(!length(available_speakers))
@@ -189,6 +182,9 @@ SUBSYSTEM_DEF(tts)
 				// MASSMETA EDIT START (ntts && /tg/tts)
 				voice_categories.Remove(voice)
 				// MASSMETA EDIT END (ntts && /tg/tts)
+	// MASSMETA EDIT START (ntts && /tg/tts)
+	refresh_voice_pools()
+	// MASSMETA EDIT END (ntts && /tg/tts)
 	if(CONFIG_GET(string/tts_tram_announcer_override))
 		tram_voice = CONFIG_GET(string/tts_tram_announcer_override)
 	else
@@ -329,14 +325,20 @@ SUBSYSTEM_DEF(tts)
 	for(var/datum/tts_request/data in in_process_http_messages)
 		var/datum/http_request/request = data.request
 		// MASSMETA EDIT START (ntts && /tg/tts)
-		if(data.legacy_api)
+		if(data.announcement)
 			UNTIL(request.is_complete())
+		else if(data.local)
+			var/datum/http_request/request_blips = data.request_blips
+			if(data.use_blips || data.force_blips)
+				UNTIL(request_blips.is_complete())
+			else
+				UNTIL(request.is_complete())
 		else
 			var/datum/http_request/request_blips = data.request_blips
 			var/datum/http_request/request_radio = data.request_radio
 			var/datum/http_request/request_blips_radio = data.request_blips_radio
 			var/datum/http_request/request_radio_gibberish = data.request_radio_gibberish
-			UNTIL(request.is_complete() && request_blips.is_complete() && request_radio.is_complete() && request_blips_radio.is_complete() && request_radio_gibberish.is_complete())
+			UNTIL(request.is_complete() && request_blips.is_complete() && request_radio.is_complete() && request_blips_radio.is_complete() && (!request_radio_gibberish || request_radio_gibberish.is_complete()))
 		// MASSMETA EDIT END (ntts && /tg/tts)
 
 #define SHIFT_DATA_ARRAY(tts_message_queue, target, data) \
@@ -381,11 +383,12 @@ SUBSYSTEM_DEF(tts)
 		var/datum/http_response/radio_response = normal_response
 		var/datum/http_response/radio_blips_response = normal_response
 		var/datum/http_response/radio_gibberish_response = normal_response
-		if(!current_request.legacy_api)
+		if(!current_request.announcement)
 			blips_response = current_request.request_blips.into_response()
 			radio_response = current_request.request_radio.into_response()
 			radio_blips_response = current_request.request_blips_radio.into_response()
-			radio_gibberish_response = current_request.request_radio_gibberish.into_response()
+			if(current_request.request_radio_gibberish)
+				radio_gibberish_response = current_request.request_radio_gibberish.into_response()
 		// MASSMETA EDIT END (ntts && /tg/tts)
 		if(current_request.requests_errored())
 			if(queued_radio_messages[identifier])
@@ -410,16 +413,11 @@ SUBSYSTEM_DEF(tts)
 				current_request.audio_length = 0
 
 		// MASSMETA EDIT START (ntts && /tg/tts)
-		if(current_request.legacy_api)
-			current_request.audio_length_blips = current_request.audio_length
-			current_request.audio_length_radio = current_request.audio_length
-			current_request.audio_length_blips_radio = current_request.audio_length
-			current_request.audio_length_radio_gibberish = current_request.audio_length
-		else
-			if(length(blips_response.headers) && blips_response.headers.Find("audio-length"))
-				current_request.audio_length_blips = text2num(blips_response.headers["audio-length"]) * 10
-				if(!current_request.audio_length_blips)
-					current_request.audio_length_blips = 0
+		if(!current_request.announcement && length(blips_response.headers) && blips_response.headers.Find("audio-length"))
+			current_request.audio_length_blips = text2num(blips_response.headers["audio-length"]) * 10
+			if(!current_request.audio_length_blips)
+				current_request.audio_length_blips = 0
+		if(!current_request.announcement)
 			if(length(radio_response.headers) && radio_response.headers.Find("audio-length"))
 				current_request.audio_length_radio = text2num(radio_response.headers["audio-length"]) * 10
 				if(!current_request.audio_length_radio)
@@ -428,26 +426,18 @@ SUBSYSTEM_DEF(tts)
 				current_request.audio_length_blips_radio = text2num(radio_blips_response.headers["audio-length"]) * 10
 				if(!current_request.audio_length_blips_radio)
 					current_request.audio_length_blips_radio = 0
-			if(length(radio_gibberish_response.headers) && radio_gibberish_response.headers.Find("audio-length"))
+			if(current_request.request_radio_gibberish && length(radio_gibberish_response.headers) && radio_gibberish_response.headers.Find("audio-length"))
 				current_request.audio_length_radio_gibberish = text2num(radio_gibberish_response.headers["audio-length"]) * 10
 				if(!current_request.audio_length_radio_gibberish)
 					current_request.audio_length_radio_gibberish = 0
 		// MASSMETA EDIT END (ntts && /tg/tts)
 		current_request.audio_file = "tmp/tts/[identifier].ogg"
 		// MASSMETA EDIT START (ntts && /tg/tts)
-		if(current_request.legacy_api)
-			current_request.audio_file_blips = current_request.audio_file
-			current_request.audio_file_radio = current_request.audio_file
-			current_request.audio_file_blips_radio = current_request.audio_file
-			current_request.audio_file_radio_gibberish = current_request.audio_file
-			if(queued_radio_messages[identifier])
-				queued_radio_messages.Remove(identifier)
-			queued_radio_messages_compression.Remove(identifier)
-		else
+		if(!current_request.announcement)
 			current_request.audio_file_blips = "tmp/tts/[identifier]_blips.ogg" // We aren't as concerned about the audio length for blips as we are with actual speech
 			current_request.audio_file_radio = "tmp/tts/[identifier]_radio.ogg"
 			current_request.audio_file_blips_radio = "tmp/tts/[identifier]_blips_radio.ogg"
-			current_request.audio_file_radio_gibberish = "tmp/tts/[identifier]_radio_gibberish.ogg"
+			current_request.audio_file_radio_gibberish = current_request.request_radio_gibberish ? "tmp/tts/[identifier]_radio_gibberish.ogg" : current_request.audio_file_radio
 		// MASSMETA EDIT END (ntts && /tg/tts)
 		// Don't need the request anymore so we can deallocate it
 		current_request.request = null
@@ -500,7 +490,23 @@ SUBSYSTEM_DEF(tts)
 				continue
 			var/sound/audio_file
 			var/sound/audio_file_blips
-			if(current_target.local)
+			// MASSMETA EDIT START (ntts && /tg/tts)
+			if(current_target.announcement)
+				if(current_target.when_to_play > world.time)
+					continue
+				current_target.play_announcement()
+				var/announcement_length = current_target.audio_length || 0
+				if(length(data) != 1)
+					var/datum/tts_request/next_target = data[2]
+					next_target.when_to_play = world.time + announcement_length
+				else
+					var/datum/tts_request/arbritrary_delay = new()
+					arbritrary_delay.when_to_play = world.time + announcement_length
+					arbritrary_delay.audio_file = TTS_ARBRITRARY_DELAY
+					queued_tts_messages[tts_target] += arbritrary_delay
+				SHIFT_DATA_ARRAY(queued_tts_messages, tts_target, data)
+			else if(current_target.local)
+			// MASSMETA EDIT END (ntts && /tg/tts)
 				if(current_target.use_blips || current_target.force_blips)
 					audio_file_blips = new(current_target.audio_file_blips)
 					SEND_SOUND(current_target.target, audio_file_blips)
@@ -510,9 +516,11 @@ SUBSYSTEM_DEF(tts)
 				SHIFT_DATA_ARRAY(queued_tts_messages, tts_target, data)
 			else if(current_target.when_to_play < world.time)
 				audio_file = new(current_target.audio_file)
+				// MASSMETA EDIT START (ntts && /tg/tts)
 				audio_file_blips = new(current_target.audio_file_blips)
 				play_tts(tts_target, current_target.listeners, audio_file, audio_file_blips, current_target.language, current_target.message_range, current_target.volume_offset, FALSE, null, current_target.audio_length, current_target.audio_length_blips)
 				completed_tts_messages[current_target.identifier] = list("ref" = current_target, "expiry_time" = world.time + 300)
+				// MASSMETA EDIT END (ntts && /tg/tts)
 				if(length(data) != 1)
 					var/datum/tts_request/next_target = data[2]
 					next_target.when_to_play = world.time + current_target.audio_length
@@ -542,7 +550,7 @@ SUBSYSTEM_DEF(tts)
 				var/sound/audio_file
 				var/sound/audio_file_blips
 				if(queued_radio_messages_compression[identifier] > 30)
-					audio_file = new(tts_request.audio_file_radio_gibberish)
+					audio_file = new(tts_request.audio_file_radio_gibberish || tts_request.audio_file_radio)
 				else
 					audio_file = new(tts_request.audio_file_radio)
 				audio_file_blips = new(tts_request.audio_file_blips_radio)
@@ -561,7 +569,7 @@ SUBSYSTEM_DEF(tts)
 
 #undef TTS_ARBRITRARY_DELAY
 
-/datum/controller/subsystem/tts/proc/queue_tts_message(datum/target, message, datum/language/language, speaker, filter, list/listeners, local = FALSE, message_range = 7, volume_offset = 0, pitch = 0, special_filters = "", blip_base = "male", blip_number = "1", force_blips = FALSE, identifier = "invalid")
+/datum/controller/subsystem/tts/proc/queue_tts_message(datum/target, message, datum/language/language, speaker, filter, list/listeners, local = FALSE, message_range = 7, volume_offset = 0, pitch = 0, special_filters = "", blip_base = "male", blip_number = "1", force_blips = FALSE, identifier = "invalid", announcement_effect = "")
 	if(!tts_enabled)
 		return
 
@@ -584,30 +592,22 @@ SUBSYSTEM_DEF(tts)
 	headers["Authorization"] = CONFIG_GET(string/tts_http_token)
 	var/datum/http_request/request = new()
 	// MASSMETA EDIT START (ntts && /tg/tts)
-	var/datum/http_request/request_blips
-	var/datum/http_request/request_radio
-	var/datum/http_request/request_blips_radio
+	var/datum/http_request/request_blips = new()
+	var/datum/http_request/request_radio = new()
+	var/datum/http_request/request_blips_radio = new()
 	// MASSMETA EDIT END (ntts && /tg/tts)
 	var/datum/http_request/request_radio_gibberish
 	var/file_name = "tmp/tts/[identifier].ogg"
 	var/file_name_blips = "tmp/tts/[identifier]_blips.ogg"
 	var/file_name_radio = "tmp/tts/[identifier]_radio.ogg"
 	var/file_name_blips_radio = "tmp/tts/[identifier]_blips_radio.ogg"
-	var/file_name_radio_gibberish = "tmp/tts/[identifier]_radio_gibberish.ogg"
 	// MASSMETA EDIT START (ntts && /tg/tts)
-	if(legacy_api)
-		request.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]?text=[url_encode(shell_scrubbed_input)]&speaker=[speaker]&ext=ogg", "", headers, file_name, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
-	else
-		request_blips = new()
-		request_radio = new()
-		request_blips_radio = new()
-		request_radio_gibberish = new()
-		request.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
-		request_blips.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-blips?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch, blips = TRUE)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]&blip_base=[blip_base]&blip_number=[blip_number]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name_blips, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
-		request_radio.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-radio?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name_radio, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
-		request_blips_radio.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-blips-radio?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch, blips = TRUE)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]&blip_base=[blip_base]&blip_number=[blip_number]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name_blips_radio, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
-		request_radio_gibberish.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-radio?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]", json_encode(list("raw_text" = shell_scrubbed_input, "gibberish_text" = shell_scrubbed_input)), headers, file_name_radio_gibberish, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
-	var/datum/tts_request/current_request = new /datum/tts_request(identifier, request, request_blips, request_radio, request_blips_radio, request_radio_gibberish, shell_scrubbed_input, target, local, language, message_range, volume_offset, listeners, pitch, force_blips, legacy_api)
+	var/announcement_effect_param = announcement_effect ? "&announcement_effect=[url_encode(announcement_effect)]" : ""
+	request.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch)]&pitch=[pitch]&special_filters=[url_encode(special_filters)][announcement_effect_param]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+	request_blips.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-blips?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch, blips = TRUE)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]&blip_base=[blip_base]&blip_number=[blip_number]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name_blips, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+	request_radio.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-radio?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch)]&pitch=[pitch]&special_filters=[url_encode(special_filters)][announcement_effect_param]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name_radio, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+	request_blips_radio.prepare(RUSTG_HTTP_METHOD_GET, "[CONFIG_GET(string/tts_http_url)]/tts-blips-radio?voice=[speaker]&identifier=[identifier]&filter=[tts_filter_encode(filter, speaker, pitch, blips = TRUE)]&pitch=[pitch]&special_filters=[url_encode(special_filters)]&blip_base=[blip_base]&blip_number=[blip_number]", json_encode(list("text" = shell_scrubbed_input)), headers, file_name_blips_radio, timeout_seconds = CONFIG_GET(number/tts_http_timeout_seconds))
+	var/datum/tts_request/current_request = new /datum/tts_request(identifier, request, request_blips, request_radio, request_blips_radio, request_radio_gibberish, shell_scrubbed_input, target, local, language, message_range, volume_offset, listeners, pitch, force_blips)
 	// MASSMETA EDIT END (ntts && /tg/tts)
 	var/list/player_queued_tts_messages = queued_tts_messages[target]
 	if(!player_queued_tts_messages)
@@ -696,13 +696,9 @@ SUBSYSTEM_DEF(tts)
 	var/pitch = 0
 	/// Should we force play blips? Used for the blips preview.
 	var/force_blips = FALSE
-	// MASSMETA EDIT START (ntts && /tg/tts)
-	/// HELLO VALTOS, IT'S TTSensky WE NEED 5 BILLION REQUESTS
-	var/legacy_api = FALSE
-	// MASSMETA EDIT END (ntts && /tg/tts)
 
 	// MASSMETA EDIT START (ntts && /tg/tts)
-/datum/tts_request/New(identifier, datum/http_request/request, datum/http_request/request_blips, datum/http_request/request_radio, datum/http_request/request_blips_radio, datum/http_request/request_radio_gibberish, message, target, local, datum/language/language, message_range, volume_offset, list/listeners, pitch, force_blips = FALSE, legacy_api = FALSE)
+/datum/tts_request/New(identifier, datum/http_request/request, datum/http_request/request_blips, datum/http_request/request_radio, datum/http_request/request_blips_radio, datum/http_request/request_radio_gibberish, message, target, local, datum/language/language, message_range, volume_offset, list/listeners, pitch, force_blips = FALSE)
 	// MASSMETA EDIT END (ntts && /tg/tts)
 	. = ..()
 	src.identifier = identifier
@@ -720,9 +716,6 @@ SUBSYSTEM_DEF(tts)
 	src.listeners = listeners
 	src.pitch = pitch
 	src.force_blips = force_blips
-	// MASSMETA EDIT START (ntts && /tg/tts)
-	src.legacy_api = legacy_api
-	// MASSMETA EDIT END (ntts && /tg/tts)
 	start_time = world.time
 
 /datum/tts_request/proc/start_requests()
@@ -732,8 +725,8 @@ SUBSYSTEM_DEF(tts)
 	else if(istype(target, /mob))
 		use_blips = (target.client?.prefs.read_preference(/datum/preference/choiced/sound_tts) == TTS_SOUND_BLIPS)
 	// MASSMETA EDIT START (ntts && /tg/tts)
-	if(legacy_api)
-		request.begin_async() // davay-davay ebash rodnoy
+	if(announcement)
+		start_announcement_requests()
 		return
 	// MASSMETA EDIT END (ntts && /tg/tts)
 	if(local)
@@ -746,13 +739,10 @@ SUBSYSTEM_DEF(tts)
 		request_blips.begin_async()
 		request_radio.begin_async()
 		request_blips_radio.begin_async()
-		request_radio_gibberish.begin_async()
+		if(request_radio_gibberish)
+			request_radio_gibberish.begin_async()
 
 /datum/tts_request/proc/get_primary_request()
-	// MASSMETA EDIT START (ntts && /tg/tts)
-	if(legacy_api) // SKIPPING BLIPS, BECAUSE NTTS DOESN'T HAVE THEM!!! Radio too, though
-		return request
-	// MASSMETA EDIT END (ntts && /tg/tts)
 	if(local)
 		if(use_blips || force_blips)
 			return request_blips
@@ -762,10 +752,6 @@ SUBSYSTEM_DEF(tts)
 		return request
 
 /datum/tts_request/proc/get_primary_response()
-	// MASSMETA EDIT START (ntts && /tg/tts)
-	if(legacy_api) // no radio&blips for you
-		return request.into_response()
-	// MASSMETA EDIT END (ntts && /tg/tts)
 	if(local)
 		if(use_blips || force_blips)
 			return request_blips.into_response()
@@ -776,9 +762,8 @@ SUBSYSTEM_DEF(tts)
 
 /datum/tts_request/proc/requests_errored()
 	// MASSMETA EDIT START (ntts && /tg/tts)
-	if(legacy_api)
-		var/datum/http_response/response = request.into_response()
-		return response.errored || response.status_code != 200 // logs are my god, and I believe in them
+	if(announcement)
+		return announcement_requests_errored()
 	// MASSMETA EDIT END (ntts && /tg/tts)
 	if(local)
 		var/datum/http_response/response
@@ -791,18 +776,17 @@ SUBSYSTEM_DEF(tts)
 		// MASSMETA EDIT END (ntts && /tg/tts)
 	else
 		var/datum/http_response/response = request.into_response()
-		var/datum/http_response/response_blips = request_blips.into_response()
 		var/datum/http_response/response_radio = request_radio.into_response()
-		var/datum/http_response/response_blips_radio = request_blips_radio.into_response()
-		var/datum/http_response/response_radio_gibberish = request_radio_gibberish.into_response()
 		// MASSMETA EDIT START (ntts && /tg/tts)
-		return response.errored || response.status_code != 200 || response_blips.errored || response_blips.status_code != 200 || response_radio.errored || response_radio.status_code != 200 || response_blips_radio.errored || response_blips_radio.status_code != 200 || response_radio_gibberish.errored || response_radio_gibberish.status_code != 200
+		var/datum/http_response/response_blips = request_blips.into_response()
+		var/datum/http_response/response_blips_radio = request_blips_radio.into_response()
+		return response.errored || response.status_code != 200 || response_blips.errored || response_blips.status_code != 200 || response_radio.errored || response_radio.status_code != 200 || response_blips_radio.errored || response_blips_radio.status_code != 200
 		// MASSMETA EDIT END (ntts && /tg/tts)
 
 /datum/tts_request/proc/requests_completed()
 // MASSMETA EDIT START (ntts && /tg/tts)
-	if(legacy_api)
-		return request.is_complete()
+	if(announcement)
+		return announcement_requests_completed()
 // MASSMETA EDIT END (ntts && /tg/tts)
 	if(local)
 		if(use_blips || force_blips)
@@ -810,7 +794,7 @@ SUBSYSTEM_DEF(tts)
 		else
 			return request.is_complete()
 	else
-		return request.is_complete() && request_blips.is_complete() && request_blips_radio.is_complete() && request_radio.is_complete() && request_radio_gibberish.is_complete()
+		return request.is_complete() && request_blips.is_complete() && request_blips_radio.is_complete() && request_radio.is_complete()
 
 /proc/filter_tts_listeners(list/listeners, radio_frequency = null)
 	if(!SStts.tts_enabled || !listeners)
