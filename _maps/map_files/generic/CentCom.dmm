@@ -2002,9 +2002,6 @@
 /obj/effect/turf_decal/stripes/line{
 	dir = 8
 	},
-/obj/effect/mapping_helpers/airlock/cyclelink_helper{
-	dir = 4
-	},
 /turf/open/floor/iron,
 /area/centcom/central_command_areas/control)
 "gZ" = (
