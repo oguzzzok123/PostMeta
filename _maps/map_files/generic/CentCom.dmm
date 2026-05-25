@@ -11145,7 +11145,7 @@
 /turf/open/floor/iron/dark/textured_large,
 /area/centcom/central_command_areas/evacuation/ship)
 "Ls" = (
-/mob/living/simple_animal/bot/secbot/grievous/toy,
+/mob/living/basic/bot/secbot/grievous/toy,
 /turf/open/floor/light/colour_cycle/dancefloor_a,
 /area/centcom/tdome/administration)
 "Lt" = (
