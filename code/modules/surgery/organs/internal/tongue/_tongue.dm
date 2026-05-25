@@ -191,6 +191,20 @@
 		new /regex(@"(\w)X", "g") = "$1KSSS",
 		new /regex(@"\bx([\-|r|R]|\b)", "g") = "ecks$1",
 		new /regex(@"\bX([\-|r|R]|\b)", "g") = "ECKS$1",
+		// MASSMETA EDIT (speech_mod)
+		new /regex("с+", "g") = "ссс",
+		new /regex("С+", "g") = "ССС",
+		new /regex("ш+", "g") = "шшш",
+		new /regex("Ш+", "g") = "ШШШ",
+		new /regex("щ+", "g") = "шшч",
+		new /regex("Щ+", "g") = "ШШЧ",
+		"з" = "с",
+		"З" = "С",
+		"ж" = "ш",
+		"Ж" = "Ш",
+		"ч" = "щ",
+		"Ч" = "Щ",
+		// MASSMETA EDIT
 	)
 
 /obj/item/organ/tongue/lizard/Initialize(mapload)
@@ -584,7 +598,11 @@
 	var/new_message
 	var/message = speech_args[SPEECH_MESSAGE]
 	for(var/i in 1 to length(message))
-		if(findtext("ABCDEFGHIJKLMNOPWRSTUVWXYZabcdefghijklmnopqrstuvwxyz", message[i])) //Im open to suggestions
+		// MASSMETA EDIT (speech_mod)
+		//if(findtext("ABCDEFGHIJKLMNOPWRSTUVWXYZabcdefghijklmnopqrstuvwxyz", message[i])) //Im open to suggestions
+		
+		if(findtext("ABCDEFGHIJKLMNOPWRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя", message[i]))
+		// MASSMETA EDIT
 			new_message += message[i] + message[i] + message[i] //aaalllsssooo ooopppeeennn tttooo sssuuuggggggeeessstttiiiooonsss
 		else
 			new_message += message[i]
