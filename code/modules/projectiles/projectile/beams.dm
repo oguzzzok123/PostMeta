@@ -172,6 +172,7 @@
 	name = "disabler beam"
 	icon_state = "omnilaser"
 	damage = 30
+	speed = 2
 	damage_type = STAMINA
 	armor_flag = ENERGY
 	hitsound = 'sound/items/weapons/sear_disabler.ogg'
@@ -183,6 +184,7 @@
 
 /obj/projectile/beam/disabler/weak
 	damage = 15
+	speed = 1
 
 /obj/projectile/beam/disabler/scatter
 	name = "scatter disabler"
