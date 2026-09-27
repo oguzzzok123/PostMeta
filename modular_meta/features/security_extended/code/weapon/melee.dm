@@ -91,7 +91,7 @@
 		log_combat(user, target, "attacked", src)
 
 		// If the target has a lot of stamina loss, knock them down
-		if (user.zone_selected == BODY_ZONE_L_LEG || user.zone_selected == BODY_ZONE_R_LEG && target.get_stamina_loss() > 26)//so smarties dont click head then leg for near instant knock
+		if ((user.zone_selected == BODY_ZONE_L_LEG || user.zone_selected == BODY_ZONE_R_LEG) && target.get_stamina_loss() > 26) //so smarties dont click head then leg for near instant knock
 			var/effectiveness = CLAMP01((target.get_stamina_loss() - 22) / 50)
 			log_combat(user, target, "knocked-down", src, "(additional effect)")
 			// Move the target back upon knockdown, to give them some time to recover
@@ -101,7 +101,7 @@
 			else
 				target.Knockdown(effectiveness * 4 SECONDS * (100-armour_level)/100)
 			target.Move(target_shove_turf, shove_dir)
-		if (user.zone_selected == BODY_ZONE_L_LEG || user.zone_selected == BODY_ZONE_R_LEG || user.zone_selected == BODY_ZONE_L_ARM || user.zone_selected == BODY_ZONE_R_ARM)
+		if ((user.zone_selected == BODY_ZONE_L_LEG || user.zone_selected == BODY_ZONE_R_LEG || user.zone_selected == BODY_ZONE_L_ARM || user.zone_selected == BODY_ZONE_R_ARM))
 			// 5-6 hits on an unarmoured target, 15 stam
 			target.apply_damage(stamina_force*0.6, STAMINA, target_zone, armour_level)
 			target.adjust_confusion(3 SECONDS)
